@@ -23,19 +23,25 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#define MAXLEN 			2048
 #define MAX_PACKET_SIZE		65536
+
+int packet_len = 1472;
+int send_buf_size = 4 * 1024 * 1024;
+unsigned long int pkt_cnt, packet_count = 10;
+int ignore_error;
 
 void usage(void)
 {
 	printf("Usage:\n");
-	printf("./sendudp -l packet_len -c packet_cout remoteip remoteport\n");
+	printf("./udpsend [ options ] remoteip port\n");
+	printf("    options: \n");
+	printf("         -l packet_len    default %d\n", packet_len);
+	printf("         -c packet_cout   default %lu\n", packet_count);
+	printf("         -b send_buf_size default %u\n", send_buf_size);
+	printf("         -i               ignore erros\n");
+	printf(" send UDP packets to remoteip port\n");
 	exit(0);
 }
-
-int packet_len = 1472;
-unsigned long int pkt_cnt, packet_count = 10000;
-int ignore_error;
 
 int main(int argc, char *argv[])
 {
@@ -59,6 +65,11 @@ int main(int argc, char *argv[])
 			if (argc - i <= 0)
 				usage();
 			packet_count = atoi(argv[i]);
+		} else if (strcmp(argv[i], "-b") == 0) {
+			i++;
+			if (argc - i <= 0)
+				usage();
+			send_buf_size = atoi(argv[i]);
 		} else
 			got_one = 0;
 		if (got_one)
@@ -69,9 +80,12 @@ int main(int argc, char *argv[])
 	if (argc != i + 2)
 		usage();
 
-	fprintf(stderr, "packet_len = %d, packet_count = %lu\n", packet_len, packet_count);
+	if (packet_len > MAX_PACKET_SIZE)
+		packet_len = MAX_PACKET_SIZE;
 
 	int n;
+	fprintf(stderr, "packet_len = %d, packet_count = %lu\n", packet_len, packet_count);
+	fprintf(stderr, "sending to ");
 	for (n = i; n < argc; n++)
 		fprintf(stderr, "%s ", argv[n]);
 	printf("\n");
@@ -95,28 +109,28 @@ int main(int argc, char *argv[])
 	}
 	while ((res = res->ai_next) != NULL);
 
-	if (packet_len > MAX_PACKET_SIZE)
-		packet_len = MAX_PACKET_SIZE;
+	setsockopt(sockfd, SOL_SOCKET, SO_SNDBUF, (char *)&send_buf_size, sizeof(send_buf_size));
+
 	memset(buf, 'a', packet_len);
-	time_t start_tm, end_tm;
-	time(&start_tm);
-	pkt_cnt = packet_count;
-	while (1) {
+	struct timeval start_tm, end_tm;
+	unsigned long int pkt_cnt;
+	gettimeofday(&start_tm, NULL);
+	for (pkt_cnt = 0; pkt_cnt < packet_count; pkt_cnt++) {
 		int r;
 		r = send(sockfd, buf, packet_len, 0);
 		if ((ignore_error == 0) && (r < 0)) {
-			fprintf(stderr, "send error, send %lu, remains %lu packets\n", packet_count-pkt_cnt, packet_count);
+			fprintf(stderr, "send error, send %lu, remains %lu packets\n", pkt_cnt, packet_count - pkt_cnt);
 			exit(0);
 		}
-
-		pkt_cnt--;
-		if (pkt_cnt == 0)
-			break;
 	}
-	time(&end_tm);
-	fprintf(stderr,"%lu seconds\n",end_tm - start_tm);
-	fprintf(stderr,"%.0f PPS, %.0f BPS\n", (float)packet_count/((float)(end_tm-start_tm)),
-		8.0*(packet_len+28)* (float)packet_count/((float)(end_tm-start_tm)));
-	fprintf(stderr,"done\n");
+	gettimeofday(&end_tm, NULL);
+	float tspan = ((end_tm.tv_sec - start_tm.tv_sec) * 1000000L + end_tm.tv_usec) - start_tm.tv_usec;
+	tspan = tspan / 1000000L;
+	fprintf(stderr, "%0.3f seconds %lu packets %lu bytes\n", tspan, packet_count, packet_count * packet_len);
+	fprintf(stderr, "PPS: %.0f PKT/S\n", (float)packet_count / tspan);
+	fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (packet_len) * (float)packet_count / tspan);
+	fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (packet_len + 28) * (float)packet_count / tspan);
+	fprintf(stderr, "WireBPS: %.0f BPS\n", 8.0 * (packet_len + 28 + 38) * (float)packet_count / tspan);
+	fprintf(stderr, "done\n");
 	exit(0);
 }
