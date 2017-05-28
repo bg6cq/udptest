@@ -34,7 +34,7 @@ void usage(void)
 }
 
 int packet_len = 1472;
-unsigned long int pkt_cnt, packet_count = 10000;
+unsigned long int pkt_cnt, packet_count = 10;
 int ignore_error;
 
 int main(int argc, char *argv[])
@@ -98,14 +98,14 @@ int main(int argc, char *argv[])
 	if (packet_len > MAX_PACKET_SIZE)
 		packet_len = MAX_PACKET_SIZE;
 	memset(buf, 'a', packet_len);
-	time_t start_tm, end_tm;
-	time(&start_tm);
+	struct timeval start_tm, end_tm;
+	gettimeofday(&start_tm, NULL);
 	pkt_cnt = packet_count;
 	while (1) {
 		int r;
 		r = send(sockfd, buf, packet_len, 0);
 		if ((ignore_error == 0) && (r < 0)) {
-			fprintf(stderr, "send error, send %lu, remains %lu packets\n", packet_count-pkt_cnt, packet_count);
+			fprintf(stderr, "send error, send %lu, remains %lu packets\n", packet_count - pkt_cnt, packet_count);
 			exit(0);
 		}
 
@@ -113,10 +113,14 @@ int main(int argc, char *argv[])
 		if (pkt_cnt == 0)
 			break;
 	}
-	time(&end_tm);
-	fprintf(stderr,"%lu seconds\n",end_tm - start_tm);
-	fprintf(stderr,"%.0f PPS, %.0f BPS\n", (float)packet_count/((float)(end_tm-start_tm)),
-		8.0*(packet_len+28)* (float)packet_count/((float)(end_tm-start_tm)));
-	fprintf(stderr,"done\n");
+	gettimeofday(&end_tm, NULL);
+	float tspan = ((end_tm.tv_sec - start_tm.tv_sec) * 1000000L + end_tm.tv_usec) - start_tm.tv_usec;
+	tspan = tspan / 1000000L;
+	fprintf(stderr, "%0.3f seconds\n", tspan);
+	fprintf(stderr, "PPS: %.0f PKT/S\n", (float)packet_count / tspan);
+	fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (packet_len) * (float)packet_count / tspan);
+	fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (packet_len + 28) * (float)packet_count / tspan);
+	fprintf(stderr, "WireBPS: %.0f BPS\n", 8.0 * (packet_len + 28 + 38) * (float)packet_count / tspan);
+	fprintf(stderr, "done\n");
 	exit(0);
 }
