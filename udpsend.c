@@ -23,19 +23,22 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#define MAXLEN 			2048
 #define MAX_PACKET_SIZE		65536
-
-void usage(void)
-{
-	printf("Usage:\n");
-	printf("./sendudp -l packet_len -c packet_cout remoteip remoteport\n");
-	exit(0);
-}
 
 int packet_len = 1472;
 unsigned long int pkt_cnt, packet_count = 10;
 int ignore_error;
+
+void usage(void)
+{
+	printf("Usage:\n");
+	printf("./udpsend [ options ] remoteip remoteport\n");
+	printf("    options: \n");
+	printf("         -l packet_len    default is %d\n", packet_len);
+	printf("         -c packet_cout   default is %lu\n", packet_count);
+	printf(" send UDP packets to remoteip\n");
+	exit(0);
+}
 
 int main(int argc, char *argv[])
 {
@@ -105,7 +108,7 @@ int main(int argc, char *argv[])
 		int r;
 		r = send(sockfd, buf, packet_len, 0);
 		if ((ignore_error == 0) && (r < 0)) {
-			fprintf(stderr, "send error, send %lu, remains %lu packets\n", packet_count - pkt_cnt, packet_count);
+			fprintf(stderr, "send error, send %lu, remains %lu packets\n", packet_count - pkt_cnt, pkt_cnt);
 			exit(0);
 		}
 
@@ -116,7 +119,7 @@ int main(int argc, char *argv[])
 	gettimeofday(&end_tm, NULL);
 	float tspan = ((end_tm.tv_sec - start_tm.tv_sec) * 1000000L + end_tm.tv_usec) - start_tm.tv_usec;
 	tspan = tspan / 1000000L;
-	fprintf(stderr, "%0.3f seconds\n", tspan);
+	fprintf(stderr, "%0.3f seconds %lu packets %lu bytes\n", tspan, packet_count, packet_count * packet_len);
 	fprintf(stderr, "PPS: %.0f PKT/S\n", (float)packet_count / tspan);
 	fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (packet_len) * (float)packet_count / tspan);
 	fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (packet_len + 28) * (float)packet_count / tspan);
