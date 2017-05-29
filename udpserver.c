@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	socklen_t ln;
 	if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, &ln) == 0) {
 		fprintf(stderr, "UDP socket RCVBUF was %d\n", n);
-		n = 4 * 1024 * 1024;
+		n = 40 * 1024 * 1024;
 		setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n));
 		if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, &ln) == 0) {
 			fprintf(stderr, "UDP socket RCVBUF setting to %d\n", n);
