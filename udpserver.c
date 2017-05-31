@@ -124,12 +124,12 @@ int main(int argc, char *argv[])
 				}
 				packet_count++;
 				udp_len += r;
-				if(r<=18) {
-					eth_len += 60;    // MAC+Pro+IP+UDP= 12+2+20+8
+				if (r <= 18) {
+					eth_len += 60;	// MAC+Pro+IP+UDP= 12+2+20+8 = 42
 					wire_len += 84;
 				} else {
-					eth_len += (r+42);
-					wire_len += (r+42+24); // IPG+PRE+CRC=12+8+4
+					eth_len += (r + 42);
+					wire_len += (r + 42 + 24);	// IPG+PRE+CRC=12+8+4 = 24
 				}
 			} else
 				break;	// timeout
