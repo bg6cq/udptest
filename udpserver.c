@@ -32,7 +32,7 @@ void usage(void)
 	exit(0);
 }
 
-unsigned long int packet_len = 0;
+unsigned long int udp_len, eth_len, wire_len;
 unsigned long int packet_count = 0;
 
 int main(int argc, char *argv[])
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 		struct timeval tv;
 		struct timeval start_tm, end_tm;
 		got_packet = 0;
-		packet_len = packet_count = 0;
+		udp_len = eth_len = wire_len = packet_count = 0;
 		fprintf(stderr, ".");
 		while (1) {
 			fd_set readfds;
@@ -123,7 +123,14 @@ int main(int argc, char *argv[])
 					continue;
 				}
 				packet_count++;
-				packet_len += r;
+				udp_len += r;
+				if(r<=18) {
+					eth_len += 60;    // MAC+Pro+IP+UDP= 12+2+20+8
+					wire_len += 84;
+				} else {
+					eth_len += (r+42);
+					wire_len += (r+42+24); // IPG+PRE+CRC=12+8+4
+				}
 			} else
 				break;	// timeout
 		}
@@ -135,11 +142,11 @@ int main(int argc, char *argv[])
 		gettimeofday(&end_tm, NULL);
 		float tspan = ((end_tm.tv_sec - start_tm.tv_sec - 1) * 1000000L + end_tm.tv_usec) - start_tm.tv_usec;
 		tspan = tspan / 1000000L;
-		fprintf(stderr, "\n%0.3f seconds %lu packets %lu bytes\n", tspan, packet_count, packet_len);
+		fprintf(stderr, "\n%0.3f seconds %lu packets %lu bytes\n", tspan, packet_count, udp_len);
 		fprintf(stderr, "PPS: %.0f PKT/S\n", (float)packet_count / tspan);
-		fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (packet_len) / tspan);
-		fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (packet_len + 28.0 * (float)packet_count) / tspan);
-		fprintf(stderr, "WireBPS: %.0f BPS\n", 8.0 * (packet_len + (28.0 + 38.0) * (float)packet_count) / tspan);
+		fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (udp_len) / tspan);
+		fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (eth_len) / tspan);
+		fprintf(stderr, "WireBPS: %.0f BPS\n", 8.0 * (wire_len) / tspan);
 		fprintf(stderr, "========================================\n");
 		fprintf(stderr, "waiting for UDP packets");
 	}
