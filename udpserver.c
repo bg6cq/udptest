@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
 			select(sockfd + 1, &readfds, NULL, NULL, &tv);
 			if (FD_ISSET(sockfd, &readfds)) {	//got packet
 				if (got_packet == 0) {	// this is first packet
-					//printf("============\n I got first packet\n");
+					printf("============\n I got first packet\n");
 					gettimeofday(&start_tm, NULL);
 					got_packet = 1;
 				}
