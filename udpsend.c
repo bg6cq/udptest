@@ -97,8 +97,7 @@ int main(int argc, char *argv[])
 		eth_len = udp_len + 42;
 		wire_len = udp_len + 42 + 24;	// IPG+PRE+CRC=12+8+4 = 24
 	}
-	fprintf(stderr,"total udp_len = %lu, eth_len=%lu, wire_len=%lubits\n",
-			udp_len * packet_count, eth_len*packet_count, wire_len*packet_count*8);
+	fprintf(stderr, "total udp_len = %lu, eth_len=%lu, wire_len=%lubits\n", udp_len * packet_count, eth_len * packet_count, wire_len * packet_count * 8);
 
 	fprintf(stderr, "sending to ");
 	for (n = i; n < argc; n++)
@@ -143,7 +142,6 @@ int main(int argc, char *argv[])
 	tspan = tspan / 1000000L;
 	fprintf(stderr, "%0.3f seconds %lu packets %lu bytes\n", tspan, packet_count, packet_count * udp_len);
 	fprintf(stderr, "PPS: %.0f PKT/S\n", (float)packet_count / tspan);
-
 
 	fprintf(stderr, "UDP BPS: %.0f BPS\n", 8.0 * (udp_len) * (float)packet_count / tspan);
 	fprintf(stderr, "ETH BPS: %.0f BPS\n", 8.0 * (eth_len) * (float)packet_count / tspan);
