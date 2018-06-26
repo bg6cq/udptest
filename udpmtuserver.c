@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
 			}
 			sendto(sockfd, buf, 100, 0, (struct sockaddr *)&ss, sock_len);
 			sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
+			sendto(sockfd, buf, 1473, 0, (struct sockaddr *)&ss, sock_len);
 		}
 	}
 	exit(0);

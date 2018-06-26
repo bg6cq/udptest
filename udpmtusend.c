@@ -115,6 +115,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "recv %d bytes\n", r);
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
+		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
+		fprintf(stderr, "recv %d bytes\n", r);
 	}
 	fprintf(stderr, "done\n");
 	exit(0);
