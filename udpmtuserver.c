@@ -109,9 +109,12 @@ int main(int argc, char *argv[])
 				continue;
 			}
 			check_buffer(buf, r);
+			fprintf(stderr,"sending 100 bytes packet\n");
 			sendto(sockfd, buf, 100, 0, (struct sockaddr *)&ss, sock_len);
+			fprintf(stderr,"sending %d bytes packet\n", r);
 			sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
 			fill_buffer(buf, 1473);
+			fprintf(stderr,"sending 1473 bytes packet\n");
 			sendto(sockfd, buf, 1473, 0, (struct sockaddr *)&ss, sock_len);
 		}
 	}

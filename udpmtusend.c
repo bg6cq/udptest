@@ -115,14 +115,17 @@ int main(int argc, char *argv[])
 		if (r<0)
 			perror("send udp");
 		memset(buf, 0, MAX_PACKET_SIZE);
+		fprintf(stderr,"waiting for 100 bytes packet, ");
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
 		if(r>=0) check_buffer(buf, r);
 		memset(buf, 0, MAX_PACKET_SIZE);
+		fprintf(stderr,"waiting for %d bytes packet, ", udp_len);
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
 		if(r>=0) check_buffer(buf, r);
 		memset(buf, 0, MAX_PACKET_SIZE);
+		fprintf(stderr,"waiting for 1473 bytes packet, ");
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
 		if(r>=0) check_buffer(buf, r);
