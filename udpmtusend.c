@@ -47,7 +47,7 @@ void usage(void)
 int main(int argc, char *argv[])
 {
 	int i = 1;
-	char buf[MAX_PACKET_SIZE];
+	unsigned char buf[MAX_PACKET_SIZE];
 	setlocale(LC_NUMERIC, "");
 	int got_one = 0;
 	do {

@@ -39,7 +39,7 @@ unsigned long int packet_count = 0;
 
 int main(int argc, char *argv[])
 {
-	char buf[MAX_PACKET_SIZE];
+	unsigned char buf[MAX_PACKET_SIZE];
 	int sockfd;
 	if (argc != 3)
 		usage();
