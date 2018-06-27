@@ -23,6 +23,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#include "util.c"
+
 #define MAX_PACKET_SIZE		65536
 
 void usage(void)
@@ -106,8 +108,10 @@ int main(int argc, char *argv[])
 			if (r <= 0) {
 				continue;
 			}
+			check_buffer(buf, r);
 			sendto(sockfd, buf, 100, 0, (struct sockaddr *)&ss, sock_len);
 			sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
+			fill_buffer(buf, 1473);
 			sendto(sockfd, buf, 1473, 0, (struct sockaddr *)&ss, sock_len);
 		}
 	}

@@ -29,6 +29,8 @@
 int udp_len = 1472, eth_len;
 unsigned long int pkt_cnt, packet_count = 1;
 
+#include "util.c"
+
 void usage(void)
 {
 	printf("Usage:\n");
@@ -108,15 +110,22 @@ int main(int argc, char *argv[])
 	memset(buf, 'a', udp_len);
 	for (pkt_cnt = 0; pkt_cnt < packet_count; pkt_cnt++) {
 		int r;
+		fill_buffer(buf, udp_len);
 		r = send(sockfd, buf, udp_len, 0);
 		if (r<0)
 			perror("send udp");
+		memset(buf, 0, MAX_PACKET_SIZE);
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
+		if(r>=0) check_buffer(buf, r);
+		memset(buf, 0, MAX_PACKET_SIZE);
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
+		if(r>=0) check_buffer(buf, r);
+		memset(buf, 0, MAX_PACKET_SIZE);
 		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
 		fprintf(stderr, "recv %d bytes\n", r);
+		if(r>=0) check_buffer(buf, r);
 	}
 	fprintf(stderr, "done\n");
 	exit(0);
