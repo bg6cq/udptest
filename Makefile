@@ -3,9 +3,9 @@ udpsend:udpsend.c
 	gcc -g -Wall -o udpsend udpsend.c
 udpserver:udpserver.c
 	gcc -g -Wall -o udpserver udpserver.c
-udpmtusend:udpmtusend.c
+udpmtusend:udpmtusend.c util.c
 	gcc -g -Wall -o udpmtusend udpmtusend.c
-udpmtuserver:udpmtuserver.c
+udpmtuserver:udpmtuserver.c util.c
 	gcc -g -Wall -o udpmtuserver udpmtuserver.c
 indent: udpsend.c udpserver.c udpmtusend.c udpmtuserver.c
 	indent udpsend.c  udpserver.c -nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4  \
