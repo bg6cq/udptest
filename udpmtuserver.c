@@ -1,4 +1,4 @@
-/* UDPmtuserver: receive udp
+/* UDPmtuserver: server side
 	  by james@ustc.edu.cn 2009.04.02
 */
 
@@ -30,93 +30,88 @@
 void usage(void)
 {
 	printf("Usage:\n");
-	printf("./udpserver [ -4 | -6 ] listen_port\n");
+	printf("./udpserver listen_address listen_port\n");
 	exit(0);
 }
 
-unsigned long int udp_len, eth_len, wire_len;
-unsigned long int packet_count = 0;
+int header_len = 28;
 
 int main(int argc, char *argv[])
 {
-	unsigned char buf[MAX_PACKET_SIZE];
-	int sockfd;
 	if (argc != 3)
 		usage();
-	fprintf(stderr, "udpserver %s listen on port %d\n", argv[1], atoi(argv[2]));
-	if (strcmp(argv[1], "-4") == 0) {	// IPv4
-		struct sockaddr_in addr;
-		int addr_len;
-		if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-			perror("socket:");
-			return (1);
-		} else {
-			printf("socket created ...\n");
-			printf("socket id :%d \n", sockfd);
-		}
+	fprintf(stderr, "udpserver listen on port %s:%d\n", argv[1], atoi(argv[2]));
 
-		addr_len = sizeof(struct sockaddr_in);
-		bzero(&addr, sizeof(addr));
-		addr.sin_family = AF_INET;
-		addr.sin_port = htons(atoi(argv[2]));
-		addr.sin_addr.s_addr = INADDR_ANY;
-		if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			perror("bind");
-			return (1);
-		}
-	} else {		// IPv6
-		struct sockaddr_in6 addr;
-		int addr_len;
-		if ((sockfd = socket(AF_INET6, SOCK_DGRAM, 0)) < 0) {
-			perror("socket:");
-			return (1);
-		} else {
-			printf("socket created ...\n");
-			printf("socket id :%d \n", sockfd);
-		}
+	unsigned char buf[MAX_PACKET_SIZE];
+	int sockfd, connected = 0;
+	struct addrinfo hints, *res;
 
-		addr_len = sizeof(struct sockaddr_in6);
-		bzero(&addr, sizeof(addr));
-		addr.sin6_family = AF_INET6;
-		addr.sin6_port = htons(atoi(argv[2]));
-		addr.sin6_addr = in6addr_any;
-		if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-			perror("bind");
-			return (1);
+	bzero(&hints, sizeof(struct addrinfo));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_DGRAM;
+
+	if (getaddrinfo(argv[1], argv[2], &hints, &res) != 0) {
+		fprintf(stderr, "host name lookup error for %s, %s", argv[1], argv[2]);
+		exit(0);
+	}
+	do {
+		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (sockfd < 0) {
+			perror("socket");
+			continue;
 		}
+		if (bind(sockfd, res->ai_addr, res->ai_addrlen) >= 0) {
+			if (res->ai_family == AF_INET6)
+				header_len = 48;
+			connected = 1;
+			break;
+		}
+	}
+	while ((res = res->ai_next) != NULL);
+
+	if (connected == 0) {
+		fprintf(stderr, "socket and bind error, please check listen addr\n");
+		exit(0);
 	}
 	int n;
 	socklen_t ln;
 	if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, &ln) == 0) {
 		fprintf(stderr, "UDP socket RCVBUF was %d\n", n);
-		n = 40 * 1024 * 1024;
+		n = 64 * 1024;
 		setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n));
 		if (getsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, &ln) == 0) {
 			fprintf(stderr, "UDP socket RCVBUF setting to %d\n", n);
 		}
 
 	}
-	fprintf(stderr, "waiting for UDP packets");
+	fprintf(stderr, "waiting for UDP packets\n");
 	while (1) {
-		fprintf(stderr, ".");
-		while (1) {
-			int r;
-			struct sockaddr_storage ss;
-			socklen_t sock_len = sizeof(struct sockaddr_storage);
-			r = recvfrom(sockfd, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&ss, &sock_len);
-			fprintf(stderr,"recv packet udp_len=%d ether_len=%d\n", r, r+28);
-			if (r <= 0) {
-				continue;
+		int r;
+		struct sockaddr_storage ss;
+		socklen_t sock_len = sizeof(struct sockaddr_storage);
+		r = recvfrom(sockfd, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&ss, &sock_len);
+		if (r <= 0)
+			continue;
+		fprintf(stderr, "recv UDP packet udp_len=%d ip_len=%d\n", r, r + header_len);
+		if (memcmp(buf, "REQ", 3) == 0) {
+			buf[r] = 0;
+			int x;
+			if (sscanf((char *)(buf + 3), "%d", &x) == 1) {
+				strcpy((char *)buf, "RET");
+				fill_buffer(buf + 3, x - 3);
+				r = sendto(sockfd, buf, x, 0, (struct sockaddr *)&ss, sock_len);
+				fprintf(stderr, "sending %d bytes RET packet\n", x);
+				if (r <= 0)
+					perror("sendto");
 			}
-			check_buffer(buf, r);
-			fprintf(stderr,"sending 100 bytes packet\n");
-			sendto(sockfd, buf, 100, 0, (struct sockaddr *)&ss, sock_len);
-			fprintf(stderr,"sending %d bytes packet\n", r);
-			sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
-			fill_buffer(buf, 1473);
-			fprintf(stderr,"sending 1473 bytes packet\n");
-			sendto(sockfd, buf, 1473, 0, (struct sockaddr *)&ss, sock_len);
+			continue;
 		}
+		strcpy((char *)buf, "ACK");
+		r = 3 + sprintf((char *)buf + 3, "%d", r);
+		r = sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
+		fprintf(stderr, "sending %d bytes ACK packet\n", r);
+		if (r <= 0)
+			perror("sendto");
 	}
 	exit(0);
 }

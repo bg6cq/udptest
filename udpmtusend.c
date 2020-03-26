@@ -1,6 +1,6 @@
-/* UDPmtusend: send udp packet to test mtu
-	  by james@ustc.edu.cn 2009.04.02
-*/
+/*
+ * UDPmtusend: send udp packet to test mtu by james@ustc.edu.cn 2009.04.02
+ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,17 +26,15 @@
 
 #define MAX_PACKET_SIZE		65536
 
-int udp_len = 1472, eth_len;
-unsigned long int pkt_cnt, packet_count = 1;
+int min_len = 1400, max_len = 1540;
+int header_len = 28;
 
 #include "util.c"
 
 void usage(void)
 {
 	printf("Usage:\n");
-	printf("./udpsend [ options ] remoteip port udp_len \n");
-	printf("    options: \n");
-	printf("         -c packet_cout   default %lu\n", packet_count);
+	printf("./udpsend remoteip port [ min_len max_len ]\n");
 	printf(" send UDP packets to remoteip port\n");
 	printf("Note: \n");
 	printf("UDP len   ether MTU\n");
@@ -46,89 +44,104 @@ void usage(void)
 
 int main(int argc, char *argv[])
 {
-	int i = 1;
+	int n;
 	unsigned char buf[MAX_PACKET_SIZE];
 	setlocale(LC_NUMERIC, "");
-	int got_one = 0;
-	do {
-		got_one = 1;
-		if (argc - i <= 0)
-			usage();
 
-		if (strcmp(argv[i], "-c") == 0) {
-			i++;
-			if (argc - i <= 0)
-				usage();
-			packet_count = atoi(argv[i]);
-		} else
-			got_one = 0;
-		if (got_one)
-			i++;
-	}
-	while (got_one);
-
-	if (argc < i + 2)
+	if (argc < 3)
 		usage();
 
-	if (argc == i +3 ) 
-		udp_len = atoi(argv[i+2]);
-	
+	if (argc >= 4)
+		min_len = atoi(argv[3]);
+	if (argc >= 5)
+		max_len = atoi(argv[4]);
 
-	if (udp_len > MAX_PACKET_SIZE)
-		udp_len = MAX_PACKET_SIZE;
+	if (min_len < 1000)
+		min_len = 1000;
 
-	int n;
-	eth_len = udp_len + 28;
-	if (eth_len <= 50) 
-		eth_len = 50;
-	fprintf(stderr, "udp_len = %d, eth_len = %d, packet_count = %lu\n", udp_len, eth_len, packet_count);
-	
-	fprintf(stderr, "sending to ");
-	for (n = i; n < i+2; n++)
-		fprintf(stderr, "%s ", argv[n]);
-	printf("\n");
+	if (min_len > MAX_PACKET_SIZE)
+		min_len = MAX_PACKET_SIZE;
+
+	if (max_len < min_len)
+		max_len = min_len;
+	if (max_len > MAX_PACKET_SIZE)
+		max_len = MAX_PACKET_SIZE;
+
+	fprintf(stderr, "sending %d - %d bytes UDP to %s:%s\n", min_len, max_len, argv[1], argv[2]);
 
 	int sockfd;
-	struct addrinfo hints, *res, *ressave;
+	struct addrinfo hints, *res;
+	int connected = 0;
 
 	bzero(&hints, sizeof(struct addrinfo));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_DGRAM;
 
-	if ((n = getaddrinfo(argv[i], argv[i + 1], &hints, &res)) != 0) {
-		fprintf(stderr, "host name lookup error for %s, %s", argv[i], argv[i + 1]);
+	if (getaddrinfo(argv[1], argv[2], &hints, &res) != 0) {
+		fprintf(stderr, "host name lookup error for %s %s", argv[1], argv[2]);
 	}
-	ressave = res;
 	do {
 		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (sockfd < 0)
+			perror("socket");
 
-		if (connect(sockfd, res->ai_addr, res->ai_addrlen) == 0)
+		if (connect(sockfd, res->ai_addr, res->ai_addrlen) == 0) {
+			if (res->ai_family == AF_INET6)
+				header_len = 48;
+			connected = 1;
 			break;	/* success */
+		}
 	}
 	while ((res = res->ai_next) != NULL);
 
-	memset(buf, 'a', udp_len);
-	for (pkt_cnt = 0; pkt_cnt < packet_count; pkt_cnt++) {
+	if (connected == 0) {
+		fprintf(stderr, "connect to %s %s error\n", argv[1], argv[2]);
+		exit(0);
+	}
+	struct timeval tv;
+	tv.tv_sec = 2;
+	tv.tv_usec = 0;
+	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+
+	for (n = min_len; n <= max_len; n++) {
 		int r;
-		fill_buffer(buf, udp_len);
-		r = send(sockfd, buf, udp_len, 0);
-		if (r<0)
+		fprintf(stderr, "udp_len=%d, ip_len=%d, ", n, n + header_len);
+
+		strcpy((char *)buf, "PKT");
+		fill_buffer(buf + 3, n - 3);
+		r = send(sockfd, buf, n, 0);
+		if (r < 0)
 			perror("send udp");
-		memset(buf, 0, MAX_PACKET_SIZE);
-		fprintf(stderr,"waiting for 100 bytes packet, ");
-		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
-		fprintf(stderr, "recv %d bytes\n", r);
-		if(r>=0) check_buffer(buf, r);
-		memset(buf, 0, MAX_PACKET_SIZE);
-		fprintf(stderr,"waiting for %d bytes packet, ", udp_len);
-		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
-		fprintf(stderr, "recv %d bytes\n", r);
-		if(r>=0) check_buffer(buf, r);
-		memset(buf, 0, MAX_PACKET_SIZE);
-		fprintf(stderr,"waiting for 1473 bytes packet, ");
-		r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
-		fprintf(stderr, "recv %d bytes\n", r);
-		if(r>=0) check_buffer(buf, r);
+
+		strcpy((char *)buf, "REQ");
+		r = 3 + sprintf((char *)buf + 3, "%d", n);
+		r = send(sockfd, buf, r, 0);
+		if (r < 0)
+			perror("send udp");
+
+		int c;
+		for (c = 0; c < 2; c++) {
+			r = recv(sockfd, buf, MAX_PACKET_SIZE, 0);
+			if (r <= 0) {
+				fprintf(stderr, ".");
+				continue;
+			}
+			if (memcmp(buf, "RET", 3) == 0) {
+				if (r == n)
+					fprintf(stderr, "S->C OK, ");
+				else
+					fprintf(stderr, "S->C %d bytes? ", r);
+			} else if (memcmp(buf, "ACK", 3) == 0) {
+				int x;
+				buf[r] = 0;
+				sscanf((char *)(buf + 3), "%d", &x);
+				if (x == n)
+					fprintf(stderr, "C->S OK, ");
+				else
+					fprintf(stderr, "C->S %d bytes? ", x);
+			}
+		}
+		fprintf(stderr, "\n");
 	}
 	fprintf(stderr, "done\n");
 	exit(0);
