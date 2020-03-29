@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 		r = recvfrom(sockfd, buf, MAX_PACKET_SIZE, 0, (struct sockaddr *)&ss, &sock_len);
 		if (r <= 0)
 			continue;
-		fprintf(stderr, "recv UDP packet udp_len=%d ip_len=%d\n", r, r + header_len);
+		fprintf(stderr, "recv UDP packet udp_len=%5d ip_pkt_len=%5d, ", r, r + header_len);
 		if (memcmp(buf, "REQ", 3) == 0) {
 			buf[r] = 0;
 			int x;
@@ -111,13 +111,19 @@ int main(int argc, char *argv[])
 					perror("sendto");
 			}
 			continue;
+		} else if (memcmp(buf, "PKT", 3) == 0) {
+			if (check_buffer(buf + 3, r - 3) == 0)
+				strcpy((char *)buf, "ACK");
+			else
+				strcpy((char *)buf, "ERR");
+			r = 3 + sprintf((char *)buf + 3, "%d", r);
+			r = sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
+			fprintf(stderr, "sending %d bytes ACK packet\n", r);
+			if (r <= 0)
+				perror("sendto");
+			continue;
 		}
-		strcpy((char *)buf, "ACK");
-		r = 3 + sprintf((char *)buf + 3, "%d", r);
-		r = sendto(sockfd, buf, r, 0, (struct sockaddr *)&ss, sock_len);
-		fprintf(stderr, "sending %d bytes ACK packet\n", r);
-		if (r <= 0)
-			perror("sendto");
+		fprintf(stderr, "unknow packet\n");
 	}
 	exit(0);
 }

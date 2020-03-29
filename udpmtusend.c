@@ -127,9 +127,12 @@ int main(int argc, char *argv[])
 				continue;
 			}
 			if (memcmp(buf, "RET", 3) == 0) {
-				if (r == n)
-					fprintf(stderr, "S-->C OK   ");
-				else
+				if (r == n) {
+					if (check_buffer(buf + 3, r - 3) == 0)
+						fprintf(stderr, "S-->C OK   ");
+					else
+						fprintf(stderr, "S-->C transfer ERROR    ");
+				} else
 					fprintf(stderr, "S-->C %d bytes? ", r);
 			} else if (memcmp(buf, "ACK", 3) == 0) {
 				int x;
@@ -139,6 +142,14 @@ int main(int argc, char *argv[])
 					fprintf(stderr, "C-->S OK   ");
 				else
 					fprintf(stderr, "C-->S %d bytes? ", x);
+			} else if (memcmp(buf, "ERR", 3) == 0) {
+				int x;
+				buf[r] = 0;
+				sscanf((char *)(buf + 3), "%d", &x);
+				if (x == n)
+					fprintf(stderr, "C-->S transfer ERROR   ");
+				else
+					fprintf(stderr, "C-->S transfer ERROR %d bytes? ", x);
 			}
 		}
 		fprintf(stderr, "\n");
