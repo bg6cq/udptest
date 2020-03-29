@@ -24,7 +24,6 @@ make
 如果显示的是如下，说明您的网络正常，可以传送任意符合协议的UDP数据包：
 
 ```
-...
 sending 1470 - 1500 bytes UDP to 202.141.176.125:6000
 udp_len=1470  ip_pkt_len=1498  C-->S OK   S-->C OK   
 udp_len=1471  ip_pkt_len=1499  C-->S OK   S-->C OK   
@@ -39,9 +38,22 @@ udp_len=1500  ip_pkt_len=1528  C-->S OK   S-->C OK
 
 服务器端网络，对IPv4/IPv6协议，应当支持长度为65507/65527字节的UDP数据包。
 
-我测试发现移动网络的IP地址，如果UDP数据包长度介于1473-1473-1479、2953-2959、4433-4439。。。等之间，传输时最后一个IP分片<8字节，这个分片会被丢弃，导致UDP通信受阻，如下所示:
+我测试发现移动网络的IP地址，如果UDP数据包长度介于1473-1479、2953-2959、4433-4439。。。等之间，传输时最后一个IP分片<8字节，这个分片会被丢弃，导致UDP通信受阻，如下所示:
 ```
-
+sending 1470 - 1500 bytes UDP to 202.141.176.125:6000
+udp_len=1470  ip_pkt_len=1498  C-->S OK   S-->C OK   
+udp_len=1471  ip_pkt_len=1499  C-->S OK   S-->C OK   
+udp_len=1472  ip_pkt_len=1500  C-->S OK   S-->C OK   
+udp_len=1473  ip_pkt_len=1501  C-->S OK   .
+udp_len=1474  ip_pkt_len=1502  C-->S OK   .
+udp_len=1475  ip_pkt_len=1503  C-->S OK   .
+udp_len=1476  ip_pkt_len=1504  C-->S OK   .
+udp_len=1477  ip_pkt_len=1505  C-->S OK   .
+udp_len=1478  ip_pkt_len=1506  C-->S OK   .
+udp_len=1479  ip_pkt_len=1507  C-->S OK   .
+udp_len=1480  ip_pkt_len=1508  C-->S OK   S-->C OK   
+udp_len=1481  ip_pkt_len=1509  C-->S OK   S-->C OK   
+udp_len=1482  ip_pkt_len=1510  C-->S OK   S-->C OK 
 ```
 
 家庭宽带，会有奇怪的结果。比如我家里的宽带，发送正常，唯独无法接收1453 - 1472字节大小的UDP包（对应的IP长度是1481-1500字节），小于1453或大于1472的UDP包都可以正常接收。
