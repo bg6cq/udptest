@@ -26,7 +26,7 @@
 
 #define MAX_PACKET_SIZE		65536
 
-int min_len = 1400, max_len = 1540;
+int min_len = 1470, max_len = 1500;
 int header_len = 28;
 
 #include "util.c"
@@ -99,13 +99,13 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 	struct timeval tv;
-	tv.tv_sec = 2;
+	tv.tv_sec = 1;
 	tv.tv_usec = 0;
 	setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
 
 	for (n = min_len; n <= max_len; n++) {
 		int r;
-		fprintf(stderr, "udp_len=%d, ip_len=%d, ", n, n + header_len);
+		fprintf(stderr, "udp_len=%d  ip_pkt_len=%d  ", n, n + header_len);
 
 		strcpy((char *)buf, "PKT");
 		fill_buffer(buf + 3, n - 3);
@@ -128,17 +128,17 @@ int main(int argc, char *argv[])
 			}
 			if (memcmp(buf, "RET", 3) == 0) {
 				if (r == n)
-					fprintf(stderr, "S->C OK, ");
+					fprintf(stderr, "S-->C OK   ");
 				else
-					fprintf(stderr, "S->C %d bytes? ", r);
+					fprintf(stderr, "S-->C %d bytes? ", r);
 			} else if (memcmp(buf, "ACK", 3) == 0) {
 				int x;
 				buf[r] = 0;
 				sscanf((char *)(buf + 3), "%d", &x);
 				if (x == n)
-					fprintf(stderr, "C->S OK, ");
+					fprintf(stderr, "C-->S OK   ");
 				else
-					fprintf(stderr, "C->S %d bytes? ", x);
+					fprintf(stderr, "C-->S %d bytes? ", x);
 			}
 		}
 		fprintf(stderr, "\n");

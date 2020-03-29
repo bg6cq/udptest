@@ -8,33 +8,41 @@
 
 #### 简单的测试
 
-在 202.141.160.125 6000 端口运行有测试的服务器端，因此只要以下命令既可以简单进行测试
+只要安装过gcc、git，就可以运行测试。
+
+在 202.141.160.125(电信)、218.104.71.172(联通)、202.141.160.125(联通) 6000 端口运行有测试的服务器端，因此只要以下命令既可以简单进行测试
 ```
 cd /usr/src/
 git clone https://github.com/bg6cq/udptest
 cd udptest
 make
-./udpmtusend 202.141.160.125 6000 1450 1472
-./udpmtusend 202.141.160.125 6000 65500 65507
+./udpmtusend 202.141.160.125 6000
+./udpmtusend 218.104.71.172 6000
+./udpmtusend 202.141.176.125 6000
 ```
 
 如果显示的是如下，说明您的网络正常，可以传送任意符合协议的UDP数据包：
 
 ```
 ...
-udp_len=1468, ip_len=1496, C->S OK, S->C OK, 
-udp_len=1469, ip_len=1497, C->S OK, S->C OK, 
-udp_len=1470, ip_len=1498, C->S OK, S->C OK, 
-udp_len=1471, ip_len=1499, C->S OK, S->C OK, 
-udp_len=1472, ip_len=1500, C->S OK, S->C OK,
+sending 1470 - 1500 bytes UDP to 202.141.176.125:6000
+udp_len=1470  ip_pkt_len=1498  C-->S OK   S-->C OK   
+udp_len=1471  ip_pkt_len=1499  C-->S OK   S-->C OK   
+udp_len=1472  ip_pkt_len=1500  C-->S OK   S-->C OK   
+udp_len=1477  ip_pkt_len=1505  C-->S OK   S-->C OK   
 ...
-udp_len=65504, ip_len=65532, C->S OK, S->C OK, 
-udp_len=65505, ip_len=65533, C->S OK, S->C OK, 
-udp_len=65506, ip_len=65534, C->S OK, S->C OK, 
-udp_len=65507, ip_len=65535, C->S OK, S->C OK,
+udp_len=1478  ip_pkt_len=1506  C-->S OK   S-->C OK   
+udp_len=1479  ip_pkt_len=1507  C-->S OK   S-->C OK   
+udp_len=1499  ip_pkt_len=1527  C-->S OK   S-->C OK   
+udp_len=1500  ip_pkt_len=1528  C-->S OK   S-->C OK
 ```
 
 服务器端网络，对IPv4/IPv6协议，应当支持长度为65507/65527字节的UDP数据包。
+
+我测试发现移动网络的IP地址，如果UDP数据包长度介于1473-1473-1479、2953-2959、4433-4439。。。等之间，传输时最后一个IP分片<8字节，这个分片会被丢弃，导致UDP通信受阻，如下所示:
+```
+
+```
 
 家庭宽带，会有奇怪的结果。比如我家里的宽带，发送正常，唯独无法接收1453 - 1472字节大小的UDP包（对应的IP长度是1481-1500字节），小于1453或大于1472的UDP包都可以正常接收。
 
