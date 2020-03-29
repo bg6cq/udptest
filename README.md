@@ -56,9 +56,20 @@ udp_len=1481  ip_pkt_len=1509  C-->S OK   S-->C OK
 udp_len=1482  ip_pkt_len=1510  C-->S OK   S-->C OK 
 ```
 
-家庭宽带，会有奇怪的结果。比如我家里的宽带，发送正常，唯独无法接收1453 - 1472字节大小的UDP包（对应的IP长度是1481-1500字节），小于1453或大于1472的UDP包都可以正常接收。
+家庭宽带网络可能会有奇怪的结果，大部分是某个设备MTU设置错误引起的。
 
-需要注意的是，苹果的操作系统，默认限制最大UDP包为9216字节。macOS可以通过命令`sudo sysctl -w net.inet.udp.maxdgram=65535`修改。
+需要注意的是：
+
+* 苹果macOS操作系统，默认限制最大UDP包为9216字节。macOS可以通过命令`sudo sysctl -w net.inet.udp.maxdgram=65535`修改。
+
+* Linux 系统默认发出的UDP包带有DF标志，如果中间链路的MTU变小，中间路由器无法重新进行分片处理。udpmtuserver中通过下面的片段使得发出的UDP包不带DF标志：
+```
+int optval = 0;
+if(setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(optval) != 0) {
+	fprintf(stderr, "Error: setsockopt %d\n",errno);
+}
+```
+
 
 #### UDP数据包与IP协议包的关系
 

@@ -84,6 +84,12 @@ int main(int argc, char *argv[])
 		}
 
 	}
+// 设置IP_MTU_DISCOVER，否则发出去的UDP包默认有DF，中间设备无法重新分片 
+	int optval = 0;
+	if (setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &optval, sizeof(optval)) != 0) {
+		fprintf(stderr, "Error: setsockopt %d\n", errno);
+	}
+
 	fprintf(stderr, "waiting for UDP packets\n");
 	while (1) {
 		int r;
