@@ -101,6 +101,8 @@ int main(int argc, char *argv[])
 		struct timeval start_tm, end_tm;
 		got_packet = 0;
 		udp_len = eth_len = wire_len = packet_count = 0;
+		unsigned long int last_cnt = 0, new_cnt;
+		
 		fprintf(stderr, ".");
 		while (1) {
 			fd_set readfds;
@@ -111,16 +113,31 @@ int main(int argc, char *argv[])
 			tv.tv_usec = 0;
 			select(sockfd + 1, &readfds, NULL, NULL, &tv);
 			if (FD_ISSET(sockfd, &readfds)) {	//got packet
-				if (got_packet == 0) {	// this is first packet
-					printf("============\n I got first packet\n");
-					gettimeofday(&start_tm, NULL);
-					got_packet = 1;
-				}
 				r = recvfrom(sockfd, buf, MAX_PACKET_SIZE, 0, NULL, 0);
 				// printf("r=%d\n", r);
 				if (r <= 0) {
 					printf("r=%d\n", r);
 					continue;
+				}
+				if ( (r >= 3) && (buf[0] == '=') && (buf[1] == '=')) {
+					buf[r] = 0;
+					if (sscanf(buf + 2, "%ld", &new_cnt) == 1) {
+						if (got_packet == 0)  	// this is first packet
+							printf("\n============\nnew packet seq: %ld\n", new_cnt);
+						else 
+							if (new_cnt != last_cnt + 1) {
+								if (new_cnt < last_cnt) 
+									printf("recv packet seq: %ld, packet seq from %ld reset to %ld!\n", new_cnt, last_cnt, new_cnt);
+								else
+									printf("recv packet seq: %ld, packet seq %ld ... %ld droped\n", new_cnt, last_cnt + 1, new_cnt - 1);
+							}
+						last_cnt = new_cnt;
+					}
+				}
+				if (got_packet == 0) {	// this is first packet
+					printf("I got first packet\n");
+					gettimeofday(&start_tm, NULL);
+					got_packet = 1;
 				}
 				packet_count++;
 				udp_len += r;
