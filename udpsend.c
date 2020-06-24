@@ -131,6 +131,7 @@ int main(int argc, char *argv[])
 	gettimeofday(&start_tm, NULL);
 	for (pkt_cnt = 0; pkt_cnt < packet_count; pkt_cnt++) {
 		int r;
+		sprintf(buf, "==%ld ", pkt_cnt);
 		r = send(sockfd, buf, udp_len, 0);
 		if ((ignore_error == 0) && (r < 0)) {
 			fprintf(stderr, "send error, send %lu, remains %lu packets\n", pkt_cnt, packet_count - pkt_cnt);
