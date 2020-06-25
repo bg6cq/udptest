@@ -65,6 +65,8 @@ int main(int argc, char *argv[])
 			if (argc - i <= 0)
 				usage();
 			udp_len = atoi(argv[i]);
+			if (udp_len < 10)
+				udp_len = 10;
 		} else if (strcmp(argv[i], "-c") == 0) {
 			i++;
 			if (argc - i <= 0)
@@ -131,7 +133,7 @@ int main(int argc, char *argv[])
 	gettimeofday(&start_tm, NULL);
 	for (pkt_cnt = 0; pkt_cnt < packet_count; pkt_cnt++) {
 		int r;
-		sprintf(buf, "==%ld ", pkt_cnt);
+		sprintf(buf, "UDP==%ld ", pkt_cnt);
 		r = send(sockfd, buf, udp_len, 0);
 		if ((ignore_error == 0) && (r < 0)) {
 			fprintf(stderr, "send error, send %lu, remains %lu packets\n", pkt_cnt, packet_count - pkt_cnt);

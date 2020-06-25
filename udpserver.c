@@ -119,26 +119,26 @@ int main(int argc, char *argv[])
 					printf("r=%d\n", r);
 					continue;
 				}
-				if ( (r >= 3) && (buf[0] == '=') && (buf[1] == '=')) {
-					buf[r] = 0;
-					if (sscanf(buf + 2, "%ld", &new_cnt) == 1) {
-						if (got_packet == 0)  	// this is first packet
-							printf("\n============\nnew packet seq: %ld\n", new_cnt);
-						else 
-							if (new_cnt != last_cnt + 1) {
-								if (new_cnt < last_cnt) 
-									printf("recv packet seq: %ld, packet seq from %ld reset to %ld!\n", new_cnt, last_cnt, new_cnt);
-								else
-									printf("recv packet seq: %ld, packet seq %ld ... %ld droped\n", new_cnt, last_cnt + 1, new_cnt - 1);
-							}
-						last_cnt = new_cnt;
-					}
+				if ( (r < 10) || (memcmp( buf, "UDP==", 5) !=0 )) {
+					printf("*");
+					continue;
 				}
-				if (got_packet == 0) {	// this is first packet
-					printf("I got first packet\n");
+				buf[r] = 0;
+				if (sscanf(buf + 5, "%ld", &new_cnt) != 1) {
+					printf("+");
+					continue;
+				}
+				if (got_packet == 0) { 	// this is first packet
+					printf("\n================== I got first packet, new packet seq: %ld\n", new_cnt);
 					gettimeofday(&start_tm, NULL);
 					got_packet = 1;
+				} else if (new_cnt != last_cnt + 1) {
+						if (new_cnt < last_cnt) 
+							printf("recv packet seq: %ld, packet seq from %ld reset to %ld!\n", new_cnt, last_cnt, new_cnt);
+						else
+							printf("recv packet seq: %ld, packet seq %ld ... %ld droped\n", new_cnt, last_cnt + 1, new_cnt - 1);
 				}
+				last_cnt = new_cnt;
 				packet_count++;
 				udp_len += r;
 				if (r <= 18) {
@@ -156,6 +156,7 @@ int main(int argc, char *argv[])
 			//printf("noting get, rerun\n");
 			continue;
 		}
+		printf("last packet seq: %ld\n", last_cnt);
 		gettimeofday(&end_tm, NULL);
 		float tspan = ((end_tm.tv_sec - start_tm.tv_sec - 1) * 1000000L + end_tm.tv_usec) - start_tm.tv_usec;
 		tspan = tspan / 1000000L;
